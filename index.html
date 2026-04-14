@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIDC Collector — 重定向</title>
+    <script>
+    (function() {
+        var ua = navigator.userAgent || '';
+        var w = window.innerWidth;
+        // 检查是否为手机/平板：UA含Mobile/Android/iPhone，或屏幕宽度<768px
+        var isMobile = /Android|iPhone|iPad|iPod|Mobile|iOS|webOS|BlackBerry/i.test(ua) || w < 768;
+        if (isMobile) {
+            window.location.replace('mobile/index.html');
+        } else {
+            window.location.replace('dashboard-v2.html');
+        }
+    })();
+    </script>
+    <noscript>
+        <p>请启用 JavaScript 访问 <a href="dashboard-v2.html">电脑端</a> 或 <a href="mobile/index.html">手机端</a>。</p>
+    </noscript>
+</head>
+</html>

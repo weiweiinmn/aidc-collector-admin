@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>添加机房 - AIDC Collector</title>
+<link rel="stylesheet" href="shared.css?v=1776180444">
+<link rel="stylesheet" href="shared-light.css">
+<style>
+/* 数字输入去掉箭头 */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none!important;margin:0!important}
+input[type=number]{-moz-appearance:textfield}
+
+/* 客户录入 */
+.customer-section{background:rgba(14,165,233,.04);border:1px solid rgba(14,165,233,.15);border-radius:10px;padding:20px;margin-top:16px}
+.customer-row{display:flex;gap:10px;align-items:center}
+.customer-box{flex:1;height:38px;padding:0 12px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.03);color:#fff;font-size:14px}
+.customer-box:focus{outline:none;border-color:#0ea5e9}
+.customer-btn{height:38px;padding:0 18px;border-radius:6px;border:none;background:#0ea5e9;color:#fff;font-size:13px;cursor:pointer;font-weight:500;white-space:nowrap}
+.customer-btn:hover{background:#0284c7}
+.customer-tags{min-height:32px;display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.customer-tag{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:16px;background:rgba(14,165,233,.15);color:#38bdf8;font-size:12px}
+.customer-tag-x{width:15px;height:15px;border-radius:50%;background:rgba(14,165,233,.3);color:#38bdf8;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;line-height:1}
+.customer-tag-x:hover{background:#ef4444;color:#fff}
+.customer-hint{font-size:12px;color:#64748b;margin-top:8px}
+
+/* 周历弹窗 */
+.wmodal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:none;align-items:center;justify-content:center}
+.wmodal.show{display:flex}
+.wbox{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;width:480px;max-width:90vw}
+.wbox-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.wbox-hd span{font-size:15px;font-weight:600;color:#f1f5f9}
+.wclose{width:28px;height:28px;border-radius:6px;border:none;background:#334155;color:#94a3b8;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.wclose:hover{background:#475569;color:#f1f5f9}
+.wctrl{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px}
+.wbtn{height:30px;padding:0 12px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#94a3b8;cursor:pointer;font-size:12px}
+.wbtn:hover{background:#1e293b;color:#f1f5f9}
+.wyr{font-size:14px;font-weight:600;color:#f1f5f9;min-width:80px;text-align:center}
+.wgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-height:320px;overflow-y:auto}
+.wcel{border:1px solid #1e3a5f;border-radius:6px;padding:6px 8px;cursor:pointer;font-size:12px;color:#94a3b8;text-align:center}
+.wcel:hover{border-color:#0ea5e9;background:rgba(14,165,233,.1);color:#38bdf8}
+.wcel.sel{border-color:#0ea5e9;background:rgba(14,165,233,.2);color:#38bdf8;font-weight:600}
+.wcel.done{border-color:#22c55e;background:rgba(34,197,94,.1);color:#22c55e}
+.wcel-head{font-size:11px;color:#475569;cursor:default;text-align:center;padding:4px 0}
+.wcel-head:hover{border-color:#1e3a5f;background:transparent}
+.wtips{font-size:12px;color:#64748b;margin-top:12px;text-align:center}
+
+/* ===== 新表单UI：紧凑4列网格 ===== */
+.main-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+/* ── 表单卡片 ── */
+.form-card {
+  background: #0F172A;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 16px;
+}
+
+/* ── 卡片标题栏 ── */
+.form-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.form-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.form-card-icon svg { width: 16px; height: 16px; }
+.form-card-icon.brand svg { stroke: #0EA5E9; }
+.form-card-icon.success svg { stroke: #22C55E; }
+.form-card-icon.warning svg { stroke: #F59E0B; }
+.form-card-icon.info svg { stroke: #3B82F6; }
+.form-card-icon.accent svg { stroke: #8B5CF6; }
+.form-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #F1F5F9;
+  letter-spacing: 0;
+}
+
+/* ── 表单行（4列等宽）── */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 12px 16px;
+  margin-bottom: 14px;
+}
+.form-row:last-child { margin-bottom: 0; }
+
+/* ── 字段（按列数）── */
+.form-field { display: flex; flex-direction: column; }
+.form-field.col-1 { grid-column: span 1; }
+.form-field.col-2 { grid-column: span 3; }
+.form-field.col-3 { grid-column: span 3; }
+.form-field.col-4 { grid-column: span 4; }
+.form-field.col-8 { grid-column: span 8; }
+.form-field.col-12 { grid-column: span 12; }
+
+/* ── 标签 ── */
+.form-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94A3B8;
+  margin-bottom: 6px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── 输入框 & 下拉框 ── */
+.form-input,
+.form-select {
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: #F1F5F9;
+  font-size: 13px;
+  font-family: inherit;
+  width: 100%;
+  transition: border-color .15s;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #0EA5E9;
+  background: rgba(14,165,233,.06);
+}
+.form-input.pointer { cursor: pointer; }
+.form-input::placeholder { color: #475569; }
+
+/* ── 地区级联行 ── */
+.region-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.region-row select { height: 36px; }
+
+/* ── 客户录入 ── */
+.customer-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.customer-box {
+  flex: 1;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: #F1F5F9;
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color .15s;
+}
+.customer-box:focus {
+  outline: none;
+  border-color: #0EA5E9;
+}
+.customer-btn {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 6px;
+  border: none;
+  background: #0EA5E9;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.customer-btn:hover { background: #0284C7; }
+.customer-tags {
+  min-height: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.customer-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  background: rgba(14,165,233,.15);
+  color: #38BDF8;
+  font-size: 12px;
+}
+.customer-tag-x {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: rgba(14,165,233,.3);
+  color: #38BDF8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  flex-shrink: 0;
+  border: none;
+}
+.customer-tag-x:hover { background: #EF4444; color: #fff; }
+.customer-hint {
+  font-size: 12px;
+  color: #475569;
+  margin-top: 8px;
+}
+
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+        <div class="nav-brand">
+            <div class="nav-brand-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>
+            </div>
+            <span class="nav-brand-text">AIDC Collector</span>
+        </div>
+        <div class="nav-menu" id="navMenu">
+            <a href="dashboard-v2.html" class="nav-item" data-page="dashboard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+                仪表盘
+            </a>
+            <a href="datacenter-list.html" class="nav-item" data-page="datacenter-list">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/><line x1="2" y1="15" x2="22" y2="15"/><line x1="9" y1="3" x2="9" y2="9"/></svg>
+                机房列表
+            </a>
+            <a href="datacenter-form.html" class="nav-item" data-page="datacenter-form" class="active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                添加机房
+            </a>
+            <a href="datacenter-import.html" class="nav-item" data-page="import">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                导入导出
+            </a>
+            <a href="gantt.html" class="nav-item" data-page="gantt">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                项目进度
+            </a>
+        </div>
+        <div class="nav-right">
+            <button class="theme-toggle" id="themeToggle" title="切换深色/浅色模式" aria-label="切换主题">
+                <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+            </button>
+            <div class="nav-user" id="navUser"></div>
+            <a href="login.html" class="nav-logout" id="navLogout" title="退出登录">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </a>
+        </div>
+    </nav>
+
+<main class="main-content">
+  <div class="page-header">
+    <h1 class="page-title"><span id="form-title-text">添加机房</span></h1>
+  </div>
+
+  <!-- ===== 一、基础信息 ===== -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <span class="form-card-icon brand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </span>
+      <span class="form-card-title">基础信息</span>
+    </div>
+    <div class="form-row">
+      <div class="form-field col-2">
+        <label class="form-label">机房名称</label>
+        <input type="text" id="dc-name" name="name" class="form-input" placeholder="如: AIMS 吉隆坡" maxlength="100">
+      </div>
+      <div class="form-field col-2">
+        <label class="form-label">信息来源</label>
+        <input type="text" name="source" class="form-input" placeholder="客户推荐 / 展会 / 网络">
+      </div>
+                <div class="form-field col-3">
+                    <label class="form-label">服务商名称</label>
+                    <input type="text" name="service_provider" class="form-input" placeholder="机房运营服务商">
+                </div>
+                <div class="form-field col-3">
+                    <label class="form-label">机房状态</label>
+                    <select name="status" class="form-select">
+                        <option value="new">新建</option>
+                        <option value="negotiating">洽谈中</option>
+                        <option value="signed">已签约</option>
+                        <option value="collected">已收录</option>
+                    </select>
+                </div>
+                
+      <div class="form-field col-2">
+        <label class="form-label">产权归属</label>
+        <select name="ownership" class="form-select">
+          <option value="">请选择</option>
+          <option value="自有">自有</option>
+          <option value="租赁">租赁</option>
+        </select>
+      </div>
+      <div class="form-field col-2">
+        <label class="form-label">预计交付时间</label>
+        <input type="text" id="delivery-date" name="expected_date" class="form-input pointer" placeholder="点击选择" readonly onclick="openWeekPicker()">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field col-8">
+        <label class="form-label">所在地区</label>
+        <div class="region-row">
+          <select id="r1" class="form-select" onchange="onR1Change()"><option value="">国家</option><option>中国</option><option>泰国</option><option>马来西亚</option><option>印尼</option><option>菲律宾</option><option>日本</option><option>新加坡</option><option>欧洲</option><option>澳大利亚</option><option>美国</option></select>
+          <select id="r2" class="form-select" disabled onchange="onR2Change()"><option value="">省/州</option></select>
+          <select id="r3" class="form-select" disabled onchange="onR3Change()"><option value="">城市</option></select>
+        </div>
+      </div>
+      <div class="form-field col-4">
+        <label class="form-label">详细地址</label>
+        <input type="text" name="address" class="form-input" placeholder="街道 / 园区 / 楼号">
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 二、机柜资源 ===== -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <span class="form-card-icon success">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="8" y2="3"/><line x1="16" y1="21" x2="16" y2="3"/><line x1="5" y1="21" x2="5" y2="3"/></svg>
+      </span>
+      <span class="form-card-title">机柜资源</span>
+    </div>
+    <div class="form-row">
+      <div class="form-field col-2">
+        <label class="form-label">总机柜数量（个）</label>
+        <input type="number" name="cabinet_count" class="form-input" placeholder="0" min="0">
+      </div>
+      <div class="form-field col-3">
+        <label class="form-label">当前可提供机柜（个）</label>
+        <input type="number" name="cabinet_available" class="form-input" placeholder="0" min="0">
+      </div>
+      <div class="form-field col-3">
+        <label class="form-label">机柜最高支撑功率（kW/柜）</label>
+        <input type="number" name="cabinet_power" class="form-input" placeholder="如: 10" min="0">
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 三、电力系统 ===== -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <span class="form-card-icon warning">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </span>
+      <span class="form-card-title">电力系统</span>
+    </div>
+    <div class="form-row">
+      <div class="form-field col-3">
+        <label class="form-label">市电总容量（kVA）</label>
+        <input type="number" name="mains_capacity" class="form-input" placeholder="0" min="0">
+      </div>
+      <div class="form-field col-3">
+        <label class="form-label">当前可用电力（MW）</label>
+        <input type="number" name="available_power" class="form-input" placeholder="0" step="0.1" min="0">
+      </div>
+      <div class="form-field col-3">
+        <label class="form-label">可扩容电力上限（MW）</label>
+        <input type="number" name="expandable_power" class="form-input" placeholder="0" step="0.1" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field col-3">
+        <label class="form-label">变压器配置</label>
+        <select name="transformer" class="form-select">
+          <option value="">请选择</option>
+          <option>2N</option><option>N+1</option><option>N</option>
+        </select>
+      </div>
+      <div class="form-field col-3">
+        <label class="form-label">单台变压器容量（kVA）</label>
+        <input type="number" name="transformer_kva" class="form-input" placeholder="0" min="0">
+      </div>
+      <div class="form-field col-3">
+        <label class="form-label">柴发冗余等级</label>
+        <input type="text" name="genset_redundancy" class="form-input" placeholder="如: N+X">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field col-3">
+        <label class="form-label">柴发储油时长（小时）</label>
+        <input type="number" name="genset_runtime" class="form-input" placeholder="0" min="0">
+      </div>
+      <div class="form-field col-3">
+        <label class="form-label">UPS配置</label>
+        <select name="ups_config" class="form-select">
+          <option value="">请选择</option>
+          <option>2N</option><option>分布式</option><option>后备</option>
+        </select>
+      </div>
+      <div class="form-field col-3">
+        <label class="form-label">UPS电池后备时间（分钟）</label>
+        <input type="number" name="ups_runtime" class="form-input" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field col-3">
+        <label class="form-label">是否配备高密度母线</label>
+        <select name="busbar" class="form-select">
+          <option value="">请选择</option>
+          <option>是</option><option>否</option>
+        </select>
+      </div>
+      <div class="form-field col-3">
+        <label class="form-label">电力可用性SLA</label>
+        <select name="power_sla" class="form-select">
+          <option value="">请选择</option>
+          <option>99.99%</option><option>99.999%</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 四、制冷系统 ===== -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <span class="form-card-icon info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="4"/></svg>
+      </span>
+      <span class="form-card-title">制冷系统</span>
+    </div>
+    <div class="form-row">
+      <div class="form-field col-3">
+        <label class="form-label">主制冷方式</label>
+        <select name="main_cooling_type" class="form-select">
+          <option value="">请选择</option>
+          <option>风冷</option><option>水冷</option><option>液冷</option><option>风冷+液冷</option>
+        </select>
+      </div>
+      <div class="form-field col-3">
+        <label class="form-label">是否支持冷板式液冷</label>
+        <select name="liquid_cooling" class="form-select">
+          <option value="">请选择</option>
+          <option>是</option><option>否</option><option>可改造</option>
+        </select>
+      </div>
+      <div class="form-field col-3">
+        <label class="form-label">地板承重（kg/m²）</label>
+        <input type="number" name="floor_load" class="form-input" placeholder="如: 1200" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field col-3">
+        <label class="form-label">架空地板高度（米）</label>
+        <input type="number" name="floor_height" class="form-input" placeholder="如: 0.8" step="0.1" min="0">
+      </div>
+      <div class="form-field col-3">
+        <label class="form-label">冷水机组数量（台）</label>
+        <input type="number" name="chiller_count" class="form-input" placeholder="0" min="0">
+      </div>
+      <div class="form-field col-3">
+        <label class="form-label">PUE设计值</label>
+        <input type="text" name="pue" class="form-input" placeholder="如: 1.3">
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 五、网络接入 ===== -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <span class="form-card-icon accent">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+      </span>
+      <span class="form-card-title">网络接入</span>
+    </div>
+    <div class="form-row">
+      <div class="form-field col-3">
+        <label class="form-label">网络进线路由（路）</label>
+        <input type="number" name="network_routes" class="form-input" placeholder="如: 2" min="1">
+      </div>
+      <div class="form-field col-3">
+        <label class="form-label">运营商数量（家）</label>
+        <input type="number" name="carrier_count" class="form-input" placeholder="如: 3" min="0">
+      </div>
+      <div class="form-field col-3">
+        <label class="form-label">800G网络支持</label>
+        <select name="network_800g" class="form-select">
+          <option value="">请选择</option>
+          <option>支持</option><option>不支持</option><option>规划中</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== KYC 信息 ========== -->
+        <div class="form-card">
+            <div class="form-card-header">
+                <span class="form-card-icon" style="color:#8B5CF6;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </span>
+                <span class="form-card-title">KYC 信息</span>
+            </div>
+            <div class="form-row">
+                <div class="form-field col-3">
+                    <label class="form-label">KYC 状态</label>
+                    <select name="kyc_status" class="form-select">
+                        <option value="">请选择</option>
+                        <option value="未开始">未开始</option>
+                        <option value="进行中">进行中</option>
+                        <option value="已完成">已完成</option>
+                        <option value="需补充">需补充</option>
+                    </select>
+                </div>
+                <div class="form-field col-3">
+                    <label class="form-label">对接同事</label>
+                    <input type="text" name="liaison" class="form-input" placeholder="负责对接的同事姓名">
+                </div>
+                <div class="form-field col-6">
+                    <label class="form-label">KYC 备注</label>
+                    <input type="text" name="kyc_remark" class="form-input" placeholder="如：待补充土地证、环评报告等">
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== 六、预留客户 ===== -->
+  <div class="form-card">
+    <div class="form-card-header">
+      <span class="form-card-icon brand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      </span>
+      <span class="form-card-title">预留客户</span>
+    </div>
+    <div class="customer-row">
+      <input type="text" class="customer-box" id="customer-input"
+        placeholder="输入客户名称，多个用逗号（,）分隔"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomer()}">
+      <button type="button" class="customer-btn" onclick="addCustomer()">录入客户</button>
+    </div>
+    <div class="customer-tags" id="customer-tags"></div>
+    <div class="customer-hint">输入客户名称后点击"录入客户"或按 Enter 键添加。点击 × 可删除。</div>
+  </div>
+</main>
+
+<!-- 周历选择弹窗 -->
+<div class="wmodal" id="weekModal">
+  <div class="wbox">
+    <div class="wbox-hd">
+      <span id="wmTitle">选择交付时间</span>
+      <button class="wclose" onclick="closeWeekPicker()">✕</button>
+    </div>
+    <div class="wctrl">
+      <button class="wbtn" onclick="stepYear(-1)">◀年</button>
+      <button class="wbtn" onclick="stepMonth(-1)">◀月</button>
+      <span class="wyr" id="wyrLabel">2026 年</span>
+      <button class="wbtn" onclick="stepMonth(1)">月▶</button>
+      <button class="wbtn" onclick="stepYear(1)">年▶</button>
+    </div>
+    <div class="wgrid" id="wGrid"></div>
+    <div class="wtips">点击选择一周作为交付时间范围</div>
+  </div>
+</div>
+
+<script src="api.js"></script>
+<script>
+// ── 全局数据 ────────────────────────────────────────
+var fixedCustomers = [];
+
+var REGION_DATA = {
+  "中国":{"北京":["东城区","西城区","朝阳区","海淀区"],"上海":["浦东新区","闵行区","徐汇区"],"广东":["广州","深圳","东莞","佛山","惠州","中山","珠海","江门","肇庆"],"江苏":["南京","苏州","无锡","常州","南通"],"浙江":["杭州","宁波","温州","嘉兴","湖州"],"四川":["成都","绵阳","德阳"],"湖北":["武汉","宜昌","襄阳"]},
+  "泰国":{"曼谷":["邦纳区","拉差达区","湄南河区"],"春武里府":["芭提雅"]},
+  "马来西亚":{"吉隆坡":["蕉赖区","武吉加辛区","赛城"],"雪兰莪":["梳邦再也","莎阿南","巴生"]},
+  "印尼":{"雅加达":["中区","东区","西区","南区"]},
+  "菲律宾":{"马尼拉":["马卡蒂","BGC","奎松"]},
+  "日本":{"东京":["品川","千代田","江东"],"大阪":["梅田"]},
+  "新加坡":{"新加坡":["裕廊","淡滨尼","大士","榜鹅"]},
+  "欧洲":{"法兰克福":["Nordpark","Equinix"],"阿姆斯特丹":["AMS1","AMS2"],"伦敦":["LD4","SL5"]},
+  "澳大利亚":{"悉尼":["Sydney 1-4"],"墨尔本":["ME1"]},
+  "美国":{"弗吉尼亚州":["阿什本","赫恩登","利斯堡"],"加州":["圣克拉拉","洛杉矶"]}
+};
+
+// ── 五级联动 ────────────────────────────────────────
+function onR1Change() {
+  var country = document.getElementById('r1').value;
+  var r2 = document.getElementById('r2');
+  var r3 = document.getElementById('r3');
+  r2.innerHTML = '<option value="">省/州</option>';
+  r3.innerHTML = '<option value="">城市</option>';
+  r3.disabled = true;
+  r2.disabled = true;
+  if (!country || !REGION_DATA[country]) return;
+  r2.disabled = false;
+  var provs = Object.keys(REGION_DATA[country]);
+  provs.forEach(function(p){
+    var opt = document.createElement('option');
+    opt.value = p; opt.textContent = p;
+    r2.appendChild(opt);
+  });
+}
+function onR2Change() {
+  var country = document.getElementById('r1').value;
+  var prov = document.getElementById('r2').value;
+  var r3 = document.getElementById('r3');
+  r3.innerHTML = '<option value="">城市</option>';
+  r3.disabled = true;
+  if (!country || !prov || !REGION_DATA[country][prov]) return;
+  r3.disabled = false;
+  REGION_DATA[country][prov].forEach(function(c){
+    var opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    r3.appendChild(opt);
+  });
+}
+function onR3Change() {}
+
+// ── 客户录入 ────────────────────────────────────────
+function addCustomer() {
+  var el = document.getElementById('customer-input');
+  var val = (el.value || '').trim();
+  if (!val) return;
+  var names = val.split(/[,，]/).map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+  names.forEach(function(n){
+    if (fixedCustomers.indexOf(n) === -1) fixedCustomers.push(n);
+  });
+  el.value = '';
+  renderCustomerTags();
+}
+function removeCustomer(name) {
+  var i = fixedCustomers.indexOf(name);
+  if (i > -1) { fixedCustomers.splice(i, 1); renderCustomerTags(); }
+}
+function renderCustomerTags() {
+  var el = document.getElementById('customer-tags');
+  var html = '';
+  fixedCustomers.forEach(function(n){
+    html += '<span class="customer-tag">' + n + '<span class="customer-tag-x" onclick="removeCustomer(\'' + n.replace(/'/g,'\'') + '\')">✕</span></span>';
+  });
+  el.innerHTML = html;
+}
+
+// ── 收集表单数据 ─────────────────────────────────────
+function collectFormData() {
+  var data = {};
+  document.querySelectorAll('input,select,textarea').forEach(function(el){
+    if (el.type === 'radio' && !el.checked) return;
+    if (el.name || el.id) {
+      var key = el.name || el.id;
+      if (el.type === 'number') data[key] = el.value ? parseFloat(el.value) : '';
+      else data[key] = el.value;
+    }
+  });
+  data.country = document.getElementById('r1').value;
+  data.province = document.getElementById('r2').value;
+  data.city = document.getElementById('r3').value;
+  data.customers = fixedCustomers.join(',');
+  return data;
+}
+
+// ── 提交 ─────────────────────────────────────────────
+function handleSubmit() {
+  var data = collectFormData();
+  if (!data['dc-name']) { alert('请填写机房名称'); return; }
+  data.name = data['dc-name'];
+  delete data['dc-name'];
+  try {
+    var result = AIDC_API.createDatacenter(data);
+    if (result.error) { alert('保存失败：' + result.error); return; }
+    alert('机房信息已提交保存！');
+    window.location.href = 'datacenter-list.html';
+  } catch(err) { alert('保存失败：' + err.message); }
+}
+function saveAndBack() {
+  var data = collectFormData();
+  if (!data['dc-name']) { alert('请填写机房名称'); return; }
+  data.name = data['dc-name'];
+  delete data['dc-name'];
+  try {
+    AIDC_API.createDatacenter(data);
+    window.location.href = 'datacenter-list.html';
+  } catch(err) { alert('保存失败：' + err.message); }
+}
+
+// ── 周历选择 ─────────────────────────────────────────
+var wpYear = new Date().getFullYear();
+function openWeekPicker() {
+  document.getElementById('weekModal').classList.add('show');
+  renderWeekPicker();
+}
+function closeWeekPicker() {
+  document.getElementById('weekModal').classList.remove('show');
+}
+function stepYear(d) { wpYear += d; renderWeekPicker(); }
+function stepMonth(d) {
+  var d2 = new Date(wpYear, 0, 1);
+  d2.setDate(d2.getDate() + d * 30);
+  wpYear = d2.getFullYear();
+  renderWeekPicker();
+}
+function renderWeekPicker() {
+  document.getElementById('wyrLabel').textContent = wpYear + ' 年';
+  var el = document.getElementById('wGrid');
+  var html = '<div class="wcel wcel-head">周一</div><div class="wcel wcel-head">周三</div><div class="wcel wcel-head">周五</div><div class="wcel wcel-head">周日</div>';
+  for (var m = 0; m < 12; m++) {
+    var first = new Date(wpYear, m, 1);
+    var last = new Date(wpYear, m + 1, 0);
+    html += '<div class="wcel wcel-head" style="grid-column:span 4;background:#0f172a;color:#64748b;cursor:default">' + (m+1) + '月</div>';
+    var cur = new Date(first);
+    while (cur <= last) {
+      if (cur.getDay() === 1) {
+        var end = new Date(cur); end.setDate(end.getDate() + 6);
+        var mon = String(cur.getMonth()+1).padStart(2,'0');
+        var day1 = String(cur.getDate()).padStart(2,'0');
+        var day2 = String(end.getDate()).padStart(2,'0');
+        var label = (m+1) + '月' + day1 + '~' + day2 + '日';
+        html += '<div class="wcel" onclick="selWeek(\'' + wpYear + '-' + mon + '-' + day1 + '\',\'' + wpYear + '-' + mon + '-' + day2 + '\')">' + label + '</div>';
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+  }
+  el.innerHTML = html;
+}
+function selWeek(start, end) {
+  document.getElementById('delivery-date').value = start + ' 至 ' + end;
+  closeWeekPicker();
+}
+
+// ── 初始化 ───────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  var u = null;
+  try { u = JSON.parse(localStorage.getItem('aidc_user')); } catch(e){}
+  if (!u) { window.location.href = 'login.html'; return; }
+  var nu = document.getElementById('navUser');
+  if (nu) nu.innerHTML = '<div class="nav-avatar">'+(u.name||'管').charAt(0)+'</div><span>'+(u.name||'管理员')+'</span>';
+  document.getElementById('themeToggle') && document.getElementById('themeToggle').addEventListener('click', function(){ document.body.classList.toggle('theme-light'); });
+  AIDC_API.seedDatacenters();
+  AIDC_API.seedUsers();
+  document.getElementById('weekModal').addEventListener('click', function(e){ if(e.target === this) closeWeekPicker(); });
+});
+</script>
+</body>
+</html>
