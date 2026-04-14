@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIDC Collector</title>
+    <script>
+    (function() {
+        var ua   = navigator.userAgent || '';
+        var w    = window.innerWidth;
+        var host = window.location.hostname;
+        var isMobile = /Android|iPhone|iPad|iPod|Mobile|iOS|webOS|BlackBerry/i.test(ua) || w < 768;
+        var isLocal  = (host === 'localhost' || host === '127.0.0.1' || host === '::1');
+
+        if (isMobile) {
+            if (isLocal) {
+                window.location.replace('mobile/index.html');
+            } else {
+                window.location.replace('https://weiweiinmn.github.io/aidc-collector-mobile/');
+            }
+        } else {
+            if (isLocal) {
+                window.location.replace('pages/login.html');
+            } else {
+                window.location.replace('pages/login.html');
+            }
+        }
+    })();
+    </script>
+    <noscript>
+        <p>请启用 JavaScript 访问
+            <a href="pages/login.html">电脑端</a> 或
+            <a href="mobile/index.html">手机端</a>。
+        </p>
+    </noscript>
+</head>
+<body></body>
+</html>
